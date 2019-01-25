@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Sirius</title>
+        <meta charset="UTF-8">
+        <style type="text/css">
+            * {
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                background: #444;
+                font-family: sans-serif;
+            }
+
+            a {
+                color: #00f;
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+			input, select {
+                background: #fff;
+                color: #000;
+                border: 1px solid #888;
+                margin-bottom: 10px;
+                cursor: pointer;
+            }
+
+			button {
+                background-color: #fff;
+                color: #000;
+                border: 1px solid #888;
+                min-width: 68px;
+                height: 28px;
+                cursor: pointer;
+            }
+            
+            select {
+                width: 100%;
+            }
+
+            canvas {
+                display: block;
+            }
+
+            .text-center {
+                text-align: center;
+            }
+
+            .title-big {
+                font-weight: bold;
+                font-size: 180%;
+            }
+
+            .title-medium {
+                font-weight: bold;
+                font-size: 90%;
+                margin-bottom: 5px;
+            }
+
+            .no-display {
+                display: none;
+            }
+
+            .margin-bottom {
+                margin-bottom: 15px;
+            }
+
+            .overlay {
+                position: fixed;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.6);
+                z-index: 2;
+            }
+
+            .overlay-inner {
+                padding: 20px;
+                background: #fff;
+                border: 2px solid #000;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                -ms-transform: translate(-50%, -50%);
+                font-size: 90%;
+            }
+
+            .row {
+                font-size: 85%;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas"></canvas>
+        <canvas id="canvas_buffer" class="no-display"></canvas>
+        <div id="menu" class="overlay no-display">
+            <div id="menu_inner" class="overlay-inner">
+                <div class="title-big text-center margin-bottom">Sirius</div>
+                <div class="title-medium text-center"><a href="http://twistypuzzles.com/forum/viewtopic.php?f=15&amp;t=33192" target="_blank">puzzle</a> by Pluton</div>
+                <div class="title-medium text-center">simulator by <a href="https://github.com/insomnia-soft" target="_blank">Insomnia soft.</a></div>
+                <div class="title-medium text-center">released under <a href="https://opensource.org/licenses/MIT" target="_blank">MIT licence</a></div>
+                <div class="title-medium text-center margin-bottom">2018-07-10</div>
+                <div class="row">Color scheme:</div>
+                <div>
+                    <select id="color_scheme">
+                        <option value="0">original</option>
+                        <option value="1">rgb (bright)</option>
+                        <option value="2">rgb</option>
+                    </select>
+                </div>
+                <div class="row">Polygon border:</div>
+                <div>
+                    <select id="polygon_border">
+                        <option value="0">0.5</option>
+                        <option value="1">1</option>
+                        <option value="2">1.5</option>
+                        <option value="3">2</option>
+                    </select>
+                </div>
+                <div class="row margin-bottom">
+                    <div>Hotkeys:</div>
+                    <div>U - undo</div>
+                    <div>N - scramble</div>
+                    <div>R - reset</div>
+                    <div>S - save</div>
+                    <div>L - load</div>
+                </div>
+                <div class="row text-center">
+                    <button id="button_close">Close</button>
+                </div>
+            </div>
+        </div>
+        <script>
+
+
+/**
+ *
+ * MIT License
+ *
+ * Copyright (c) 2018 Insomnia soft.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
+
+
+"use strict";
+
+var angles = [
+    { s: 0.11208193, e: 0.28180472 },
+    { s: 0.28180472, e: 0.40369644 },
+    { s: 0.40369644, e: 0.64350111 },
+    { s: 0.64350111, e: 0.76539283 },
+    { s: 0.76539283, e: 0.93511562 },
+    { s: 0.93511562, e: 1.15927948 },
+    { s: 1.15927948, e: 1.32900228 },
+    { s: 1.32900228, e: 1.45089399 },
+    { s: 1.45089399, e: 1.69069866 },
+    { s: 1.69069866, e: 1.81259038 },
+    { s: 1.81259038, e: 1.98231317 },
+    { s: 1.98231317, e: 2.20647703 },
+    { s: 2.20647703, e: 2.37619983 },
+    { s: 2.37619983, e: 2.49809154 },
+    { s: 2.49809154, e: 2.73789621 },
+    { s: 2.73789621, e: 2.85978793 },
+    { s: 2.85978793, e: 3.02951072 },
+    { s: 3.02951072, e: -3.02951072 },
+    { s: -3.02951072, e: -2.85978793 },
+    { s: -2.85978793, e: -2.73789621 },
+    { s: -2.73789621, e: -2.49809154 },
+    { s: -2.49809154, e: -2.37619983 },
+    { s: -2.37619983, e: -2.20647703 },
+    { s: -2.20647703, e: -1.98231317 },
+    { s: -1.98231317, e: -1.81259038 },
+    { s: -1.81259038, e: -1.69069866 },
+    { s: -1.69069866, e: -1.45089399 },
+    { s: -1.45089399, e: -1.32900228 },
+    { s: -1.32900228, e: -1.15927948 },
+    { s: -1.15927948, e: -0.93511562 },
+    { s: -0.93511562, e: -0.76539283 },
+    { s: -0.76539283, e: -0.64350111 },
+    { s: -0.64350111, e: -0.40369644 },
+    { s: -0.40369644, e: -0.28180472 },
+    { s: -0.28180472, e: -0.11208193 },
+    { s: -0.11208193, e: 0.11208193 }
+];
+
+var circles = [
+    { x: 0, y: 0 },
+    { x: 0.8, y: 0 },
+    { x: 1.6, y: 0 },
+    { x: 1.2, y: 0.69282032 },
+    { x: 0.4, y: 0.69282032 },
+    { x: -0.4, y: 0.69282032 },
+    { x: -0.8, y: 0 },
+    { x: -0.4, y: -0.69282032 },
+    { x: 0.4, y: -0.69282032 },
+    { x: 1.2, y: -0.69282032 },
+    { x: 2.4, y: 0 },
+    { x: 2, y: 0.69282032 },
+    { x: 1.6, y: 1.38564065 },
+    { x: 0.8, y: 1.38564065 },
+    { x: 0, y: 1.38564065 },
+    { x: -0.8, y: 1.38564065 },
+    { x: -1.2, y: 0.69282032 },
+    { x: -1.6, y: 0 },
+    { x: -1.2, y: -0.69282032 },
+    { x: -0.8, y: -1.38564065 },
+    { x: 0, y: -1.38564065 },
+    { x: 0.8, y: -1.38564065 },
+    { x: 1.6, y: -1.38564065 },
+    { x: 2, y: -0.69282032 }
+];
+
+var polygonList = [
+    [[6, 35], [7, 5], [8, 11], [1, 17], [4, 23], [5, 29], 1], // p1
+    [[7, 4], [6, 35, true], [5, 30], 1], // p2
+    [[6, 0], [8, 10], [7, 5, true], 1], // p3
+    [[7, 6], [1, 16], [8, 11, true], 1], // p4
+    [[8, 12], [4, 22], [1, 17, true], 0], // p5
+    [[4, 23, true], [1, 18], [5, 28], 1], // p6
+    [[5, 29, true], [4, 24], [6, 34], 1], // p7
+    [[6, 34, true], [4, 25], [9, 14, true], [7, 3], [5, 30, true], 1], // p8
+    [[5, 31], [3, 20, true], [8, 9], [6, 0, true], [7, 4, true], 1], // p9
+    [[6, 1], [14, 26, true], [1, 15], [7, 6, true], [8, 10, true], 1], // p10
+    [[7, 7], [16, 32, true], [4, 21], [8, 12, true], [1, 16, true], 0], // p11
+    [[8, 13], [18, 2, true], [5, 27], [1, 18, true], [4, 22, true], 0], // p12
+    [[1, 19], [20, 8, true], [6, 33], [4, 24, true], [5, 28, true], 1], // p13
+    [[6, 33, true], [20, 7, true], [9, 15, true], [4, 25, true], 1], // p14
+    [[5, 31, true], [7, 3, true], [9, 13, true], [3, 21, true], 1], // p15
+    [[6, 1, true], [8, 9, true], [3, 19, true], [14, 27, true], 1], // p16
+    [[7, 7, true], [1, 15, true], [14, 25, true], [16, 33, true], 0], // p17
+    [[8, 13, true], [4, 21, true], [16, 31, true], [18, 3, true], 0], // p18
+    [[5, 27, true], [18, 1, true], [20, 9, true], [1, 19, true], 0], // p19
+    [[9, 14], [4, 26], [7, 2], 1], // p20
+    [[3, 20], [5, 32], [8, 8], 1], // p21
+    [[14, 26], [6, 2], [1, 14], 1], // p22
+    [[16, 32], [7, 8], [4, 20], 0], // p23
+    [[18, 2], [8, 14], [5, 26], 0], // p24
+    [[20, 8], [1, 20], [6, 32], 1], // p25
+    [[4, 26, true], [9, 15], [20, 6, true], [21, 10, true], [7, 1], 1], // p26
+    [[7, 2, true], [4, 27], [2, 18, true], [3, 22, true], [9, 13], 1], // p27
+    [[5, 32, true], [3, 21], [9, 12, true], [2, 16, true], [8, 7], 1], // p28
+    [[8, 8, true], [5, 33], [13, 24, true], [14, 28, true], [3, 19], 1], // p29
+    [[6, 2, true], [14, 27], [3, 18, true], [13, 22, true], [1, 13], 1], // p30
+    [[1, 14, true], [6, 3], [15, 30, true], [16, 34, true], [14, 25], 0], // p31
+    [[7, 8, true], [16, 33], [14, 24, true], [15, 28, true], [4, 19], 0], // p32
+    [[4, 20, true], [7, 9], [17, 0, true], [18, 4, true], [16, 31], 0], // p33
+    [[8, 14, true], [18, 3], [16, 30, true], [17, 34, true], [5, 25], 0], // p34
+    [[5, 26, true], [8, 15], [19, 6, true], [20, 10, true], [18, 1], 0], // p35
+    [[1, 20, true], [20, 9], [18, 0, true], [19, 4, true], [6, 31], 0], // p36
+    [[6, 32, true], [1, 21], [21, 12, true], [9, 16, true], [20, 7], 1], // p37
+    [[21, 11, true], [20, 6], [9, 16], 1], // p38
+    [[2, 17, true], [9, 12], [3, 22], 1], // p39
+    [[13, 23, true], [3, 18], [14, 28], 1], // p40
+    [[15, 29, true], [14, 24], [16, 34], 0], // p41
+    [[17, 35, true], [16, 30], [18, 4], 0], // p42
+    [[19, 5, true], [18, 0], [20, 10], 0], // p43
+    [[6, 31, true], [19, 3, true], [21, 13, true], [1, 21, true], 0], // p44
+    [[7, 1, true], [21, 9, true], [2, 19, true], [4, 27, true], 1], // p45
+    [[8, 7, true], [2, 15, true], [13, 25, true], [5, 33, true], 1], // p46
+    [[1, 13, true], [13, 21, true], [15, 31, true], [6, 3, true], 0], // p47
+    [[4, 19, true], [15, 27, true], [17, 1, true], [7, 9, true], 0], // p48
+    [[5, 25, true], [17, 33, true], [19, 7, true], [8, 15, true], 0], // p49
+    [[19, 5], [20, 11], [8, 17], [0, 23], [6, 29], [18, 35], 0], // p50
+    [[21, 11], [9, 17], [1, 23], [0, 29], [7, 35], [20, 5], 1], // p51
+    [[2, 17], [3, 23], [4, 29], [0, 35], [8, 5], [9, 11], 1], // p52
+    [[13, 23], [14, 29], [5, 35], [0, 5], [1, 11], [3, 17], 1], // p53
+    [[15, 29], [16, 35], [6, 5], [0, 11], [4, 17], [14, 23], 0], // p54
+    [[17, 35], [18, 5], [7, 11], [0, 17], [5, 23], [16, 29], 0], // p55
+    [[18, 35, true], [6, 30], [19, 4], 0], // p56
+    [[9, 17, true], [21, 12], [1, 22], 1], // p57
+    [[20, 5, true], [7, 0], [21, 10], 1], // p58
+    [[3, 23, true], [2, 18], [4, 28], 1], // p59
+    [[9, 11, true], [8, 6], [2, 16], 1], // p60
+    [[14, 29, true], [13, 24], [5, 34], 1], // p61
+    [[3, 17, true], [1, 12], [13, 22], 1], // p62
+    [[16, 35, true], [15, 30], [6, 4], 0], // p63
+    [[14, 23, true], [4, 18], [15, 28], 0], // p64
+    [[18, 5, true], [17, 0], [7, 10], 0], // p65
+    [[16, 29, true], [5, 24], [17, 34], 0], // p66
+    [[20, 11, true], [19, 6], [8, 16], 0], // p67
+    [[21, 14, true], [19, 3], [6, 30, true], [18, 34, true], [0, 25], 0], // p68
+    [[19, 2, true], [0, 27], [9, 18, true], [1, 22, true], [21, 13], 0], // p69
+    [[2, 20, true], [21, 9], [7, 0, true], [20, 4, true], [0, 31], 1], // p70
+    [[21, 8, true], [0, 33], [3, 24, true], [4, 28, true], [2, 19], 1], // p71
+    [[13, 26, true], [2, 15], [8, 6, true], [9, 10, true], [0, 1], 1], // p72
+    [[2, 14, true], [0, 3], [14, 30, true], [5, 34, true], [13, 25], 1], // p73
+    [[15, 32, true], [13, 21], [1, 12, true], [3, 16, true], [0, 7], 0], // p74
+    [[13, 20, true], [0, 9], [16, 0, true], [6, 4, true], [15, 31], 0], // p75
+    [[17, 2, true], [15, 27], [4, 18, true], [14, 22, true], [0, 13], 0], // p76
+    [[15, 26, true], [0, 15], [18, 6, true], [7, 10, true], [17, 1], 0], // p77
+    [[19, 8, true], [17, 33], [5, 24, true], [16, 28, true], [0, 19], 0], // p78
+    [[17, 32, true], [0, 21], [20, 12, true], [8, 16, true], [19, 7], 0], // p79
+    [[0, 26], [19, 2], [21, 14], 0], // p80
+    [[0, 32], [21, 8], [2, 20], 1], // p81
+    [[0, 2], [2, 14], [13, 26], 1], // p82
+    [[0, 8], [13, 20], [15, 32], 0], // p83
+    [[0, 14], [15, 26], [17, 2], 0], // p84
+    [[0, 20], [17, 32], [19, 8], 0], // p85
+    [[6, 29, true], [0, 24], [18, 34], 0], // p86
+    [[1, 23, true], [9, 18], [0, 28], 0], // p87
+    [[7, 35, true], [0, 30], [20, 4], 1], // p88
+    [[4, 29, true], [3, 24], [0, 34], 1], // p89
+    [[8, 5, true], [0, 0], [9, 10], 1], // p90
+    [[5, 35, true], [14, 30], [0, 4], 1], // p91
+    [[1, 11, true], [0, 6], [3, 16], 0], // p92
+    [[6, 5, true], [16, 0], [0, 10], 0], // p93
+    [[4, 17, true], [0, 12], [14, 22], 0], // p94
+    [[7, 11, true], [18, 6], [0, 16], 0], // p95
+    [[5, 23, true], [0, 18], [16, 28], 0], // p96
+    [[8, 17, true], [20, 12], [0, 22], 0], // p97
+    [[0, 35, true], [4, 30], [8, 4], 2], // p98
+    [[23, 14, true], [8, 3], [4, 30, true], [0, 34, true], [3, 25], 2], // p99
+    [[11, 20, true], [9, 9], [0, 0, true], [8, 4, true], [4, 31], 2], // p100
+    [[8, 3, true], [23, 13, true], [11, 21, true], [4, 31, true], 2], // p100
+    [[0, 33, true], [21, 7, true], [23, 15, true], [3, 25, true], 2], // p102
+    [[9, 9, true], [11, 19, true], [13, 27, true], [0, 1, true], 2], // p103
+    [[0, 32, true], [2, 21], [22, 12, true], [23, 16, true], [21, 7], 2], // p104
+    [[0, 2, true], [13, 27], [11, 18, true], [12, 22, true], [2, 13], 2], // p105
+    [[0, 31, true], [20, 3, true], [22, 13, true], [2, 21, true], 2], // p106
+    [[2, 13, true], [12, 21, true], [14, 31, true], [0, 3, true], 2], // p107
+    [[22, 14, true], [20, 3], [0, 30, true], [7, 34, true], [1, 25], 2], // p108
+    [[12, 20, true], [1, 9], [5, 0, true], [0, 4, true], [14, 31], 2], // p109
+    [[0, 29, true], [1, 24], [7, 34], 2], // p110
+    [[0, 5, true], [5, 0], [1, 10], 2], // p111
+    [[10,17, true], [23, 12], [11, 22], 2], // p112
+    [[8, 2, true], [3, 27], [10, 18, true], [11, 22, true], [23, 13], 2], // p113
+    [[4, 32, true], [11, 21], [23, 12, true], [10, 16, true], [9, 7], 2], // p114
+    [[23, 14], [3, 26], [8, 2], 2], // p115
+    [[4, 32], [9, 8], [11, 20], 2], // p116
+    [[3, 26, true], [23, 15], [21, 6, true], [22, 10, true], [8, 1], 2], // p117
+    [[9, 8, true], [4, 33], [12, 24, true], [13, 28, true], [11, 19], 2], // p118
+    [[23, 16], [22, 11, true], [21, 6], 2], // p119
+    [[13, 28], [12, 23, true], [11, 18], 2], // p120
+    [[2, 22], [23, 17, true], [22, 12], 2], // p121
+    [[12, 22], [11, 17, true], [2, 12], 2], // p122
+    [[20, 2, true], [1, 27], [23, 18, true], [2, 22, true], [22, 13], 2], // p123
+    [[14, 32, true], [12, 21], [2, 12, true], [11, 16, true], [1, 7], 2], // p124
+    [[22, 14], [1, 26], [20, 2], 2], // p125
+    [[14, 32], [1, 8], [12, 20], 2], // p126
+    [[23, 17], [2, 23], [1, 29], [8, 35], [21, 5], [22, 11], 2], // p127
+    [[12, 23], [13, 29], [4, 35], [1, 5], [2, 11], [11, 17], 2], // p128
+    [[23, 18], [1, 28], [2, 23, true], 2], // p129
+    [[2, 11, true], [1, 6], [11, 16], 2], // p130
+    [[21, 5, true], [8, 0], [22, 10], 2], // p131
+    [[12, 24], [4, 34], [13, 29, true], 2], // p132
+    [[8, 35, true], [1, 30], [21, 4], 2], // p133
+    [[4, 35, true], [13, 30], [1, 4], 2], // p134
+    [[8, 1, true], [22, 9, true], [10, 19, true], [3, 27, true], 2], // p135
+    [[9, 7, true], [10, 15, true], [12, 25, true], [4, 33, true], 2], // p136
+    [[10, 20, true], [22, 9], [8, 0, true], [21, 4, true], [1, 31], 2], // p137
+    [[10, 14, true], [1, 3], [13, 30, true], [4, 34, true], [12, 25], 2], // p138
+    [[10, 17], [11, 23], [3, 29], [1, 35], [9, 5], [23, 11], 2], // p139
+    [[10, 18], [3, 28], [11, 23, true], 2], // p140
+    [[23, 11, true], [9, 6], [10, 16], 2], // p141
+    [[22, 8, true], [1, 33], [11, 24, true], [3, 28, true], [10, 19], 2], // p142
+    [[12, 26, true], [10, 15], [9, 6, true], [23, 10, true], [1, 1], 2], // p143
+    [[10, 20], [1, 32], [22, 8], 2], // p144
+    [[12, 26], [1, 2], [10, 14], 2], // p145
+    [[11, 24], [1, 34], [3, 29, true], 2], // p146
+    [[9, 5, true], [1, 0], [23, 10], 2] // p147
+];
+
+var swapList = [
+    [
+        [6, 5, 4, 3, 2, 1],
+        [12, 11, 10, 9, 8, 7],
+        [18, 17, 16, 15, 14, 13],
+        [24, 23, 22, 21, 20, 19],
+        [35, 33, 31, 29, 27, 25],
+        [36, 34, 32, 30, 28, 26],
+        [42, 41, 40, 39, 38, 37],
+        [48, 47, 46, 45, 44, 43],
+        [54, 53, 52, 51, 50, 49],
+        [65, 63, 61, 59, 57, 55],
+        [66, 64, 62, 60, 58, 56],
+        [77, 75, 73, 71, 69, 67],
+        [78, 76, 74, 72, 70, 68],
+        [84, 83, 82, 81, 80, 79],
+        [95, 93, 91, 89, 87, 85],
+        [96, 94, 92, 90, 88, 86]
+    ],
+    [
+        [38, 59, 89, 97, 88, 58],
+        [70, 26, 27, 71, 99, 98],
+        [44, 14, 45, 102, 100, 101],
+        [80, 19, 20, 81, 115, 114],
+        [103, 25, 8, 72, 117, 112],
+        [105, 13, 15, 106, 135, 134],
+        [118, 57, 1, 60, 119, 111],
+        [124, 24, 21, 125, 144, 143],
+        [126, 50, 0, 52, 127, 138],
+        [69, 7, 28, 104, 113, 116],
+        [122, 36, 9, 108, 137, 141],
+        [136, 107, 12, 29, 123, 142],
+        [87, 6, 39, 121, 140, 130],
+        [139, 120, 37, 2, 90, 131],
+        [128, 56, 3, 110, 133, 145],
+        [109, 5, 61, 129, 146, 132]
+    ]
+];
+
+function Arc(point, angle, cw) {
+    this.defaultX = point.x;
+    this.defaultY = point.y;
+    this.x = point.x;
+    this.y = point.y;
+    if (cw !== undefined && cw === true) {
+        this.cw = true;
+        this.angleStart = angle.e;
+        this.angleEnd = angle.s;
+    } else {
+        this.cw = false;
+        this.angleStart = angle.s;
+        this.angleEnd = angle.e;
+    }
+    this.defaultAngleStart = this.angleStart;
+    this.defaultAngleEnd = this.angleEnd;
+}
+
+Arc.prototype.draw = function (ctx) {
+    if (Board.radius <= 0) {
+        return;
+    }
+
+    ctx.arc(this.x * Board.radius, this.y * Board.radius, Board.radius, this.angleStart, this.angleEnd, this.cw);
+};
+
+Arc.prototype.rotate = function (deg) {
+    var x, y,
+        rad = deg * (Math.PI / 180);
+
+    x = this.defaultX * Math.cos(rad) - this.defaultY * Math.sin(rad);
+    y = this.defaultX * Math.sin(rad) + this.defaultY * Math.cos(rad);
+
+    this.angleStart = this.defaultAngleStart + rad;
+    this.angleEnd = this.defaultAngleEnd + rad;
+
+    this.x = x;
+    this.y = y;
+};
+
+Arc.prototype.reset = function () {
+    this.x = this.defaultX;
+    this.y = this.defaultY;
+    this.angleStart = this.defaultAngleStart;
+    this.angleEnd = this.defaultAngleEnd;
+};
+
+Arc.prototype.shiftLeft = function () {
+    this.defaultX -= 0.8;
+};
+
+Arc.prototype.shiftRight = function () {
+    this.defaultX += 0.8;
+};
+
+function Polygon(arcs) {
+    var i, cw, count = arcs.length - 1;
+
+    this.color = arcs[arcs.length - 1];
+    this.defaultColor = this.color;
+    this.arcs = [];
+
+    for (i = 0; i < count; i++) {
+        if (arcs[i].length === 3) {
+            cw = arcs[i][2];
+        } else {
+            cw = false;
+        }
+
+        this.arcs.push(new Arc(circles[arcs[i][0]], angles[arcs[i][1]], cw));
+    }
+}
+
+Polygon.prototype.draw = function (ctx) {
+    ctx.beginPath();
+    for (var a in this.arcs) {
+        this.arcs[a].draw(ctx);
+    }
+    ctx.fillStyle = Board.colors[Board.colorScheme][this.color];
+    ctx.fill();
+    ctx.stroke();
+};
+
+Polygon.prototype.rotate = function (deg) {
+    var i, count = this.arcs.length;
+    for (i = 0; i < count; i++) {
+        this.arcs[i].rotate(deg);
+    }
+};
+
+Polygon.prototype.reset = function () {
+    var i, count = this.arcs.length;
+    for (var i = 0; i < count; i++) {
+        this.arcs[i].reset();
+    }
+};
+
+Polygon.prototype.shiftLeft = function () {
+    var i, count = this.arcs.length;
+    for (i = 0; i < count; i++) {
+        this.arcs[i].shiftLeft();
+    }
+};
+
+Polygon.prototype.shiftRight = function () {
+    var i, count = this.arcs.length;
+    for (i = 0; i < count; i++) {
+        this.arcs[i].shiftRight();
+    }
+};
+
+var Board = {
+
+    canvas: null,
+    canvasBuffer: null,
+    ctx: null,
+    ctxBuffer: null,
+    radius: 0,
+    translateX1: 0,
+    translateX2: 0,
+    translateY: 0,
+    colorScheme: 0,
+    colors: [
+        ["#029e30", "#029e30", "#ffd902"],
+        ["#ff8080", "#80ff80", "#8080ff"],
+        ["#ff0000", "#00ff00", "#0000ff"]
+    ],
+    lineWidth: 0,
+    lineWidths: [0.5, 1, 1.5, 2],
+    polygons: [],
+    left: [], // 0
+    middle: [], // 1
+    right: [], // 2
+    undo: [],
+    timer: null,
+    rotateQueue: [],
+    gameRunning: false,
+    startTime: null,
+    moves: 0,
+
+    rotating: false,
+    refreshSpeed: 25, // ms
+    animTimer: null,
+    animStartTime: null,
+    animEndTime: null,
+    animationSpeed: 300,
+    animCircle1: null,
+    animCircle2: null,
+    animSwapCircle: null,
+    animTranslateX: null,
+
+    init: function () {
+        var dimensionRatio = 2.8 / 2, // from left to right (1 + 0.8 + 1 = 2.8)
+            windowRatio = this.getWindowWidth() / this.getWindowHeight();
+
+        this.canvas = document.getElementById("canvas");
+        this.canvasBuffer = document.getElementById("canvas_buffer");
+
+        this.ctx = this.canvas.getContext("2d");
+        this.ctxBuffer = this.canvasBuffer.getContext("2d");
+
+        if (windowRatio > dimensionRatio) {
+            this.radius = this.getWindowHeight() / 2 - 50;
+        } else {
+            this.radius = this.getWindowWidth() * (1 / 2.8) - 50;
+        }
+
+        this.canvas.width = this.getWindowWidth();
+        this.canvas.height = this.getWindowHeight();
+        this.canvasBuffer.width = this.getWindowWidth();
+        this.canvasBuffer.height = this.getWindowHeight();
+
+        this.translateX1 = this.getWindowWidth() / 2 - (this.radius * 0.8) / 2;
+        this.translateX2 = this.getWindowWidth() / 2 + (this.radius * 0.8) / 2;
+        this.translateY = this.getWindowHeight() / 2;
+
+        this.ctx.lineWidth = this.lineWidths[this.lineWidth];
+        this.ctxBuffer.lineWidth = this.lineWidths[this.lineWidth];
+        this.ctx.font = "30px Arial";
+        this.ctx.textAlign = "center";
+
+        if (this.polygons.length === 0) {
+            this.initPolygons();
+            this.drawMenuIcon(this.ctx);
+        }
+    },
+
+    reset: function () {
+        this.gameRunning = false;
+        this.moves = 0;
+        this.polygons = [];
+        this.left = [];
+        this.middle = [];
+        this.right = [];
+        this.undo = [];
+        this.init();
+    },
+
+    initPolygons: function () {
+        var p, poly, newIndex, count = polygonList.length;
+
+        this.ctx.translate(this.translateX1, this.translateY);
+
+        for (p = 0; p < count; p++) {
+            poly = new Polygon(polygonList[p]);
+            newIndex = this.polygons.length;
+            switch (polygonList[p][polygonList[p].length - 1]) {
+                case 0:
+                    this.left.push(newIndex);
+                    break;
+                case 1:
+                    this.middle.push(newIndex);
+                    break;
+                case 2:
+                    this.right.push(newIndex);
+                    break;
+            }
+            this.polygons.push(poly);
+            poly.draw(this.ctx);
+        }
+
+        this.ctx.translate(-this.translateX1, -this.translateY);
+
+        document.getElementById("canvas").addEventListener("mousedown", Board.evMouseDown);
+        document.getElementById("canvas").addEventListener("contextmenu", function (event) { event.preventDefault(); });
+        window.addEventListener("mousemove", Board.evMouseMove);
+        window.addEventListener("resize", Board.evResize);
+        window.addEventListener("keydown", Board.evKeyDown);
+    },
+
+    evMouseDown: function (event) {
+        var cw = false,
+            left = false,
+            inC1 = false,
+            inC2 = false,
+            curX = event.layerX,
+            curY = event.layerY,
+            distX1 = curX - Board.translateX1,
+            distX2 = curX - Board.translateX2,
+            distY = curY - Board.translateY,
+            rr = Board.radius * Board.radius;
+
+        if (event.layerX >= Board.getWindowWidth() - 40 && event.layerY <= 40) {
+            Options.evShow();
+            return;
+        }
+
+        if (event.button === 2) {
+            cw = true;
+        }
+
+        if (distX1 * distX1 + distY * distY < rr) {
+            inC1 = true;
+        }
+
+        if (distX2 * distX2 + distY * distY < rr) {
+            inC2 = true;
+        }
+
+        if (!inC1 && !inC2) {
+            return;
+        }
+
+        if (event.layerX < Board.getWindowWidth() / 2) {
+            left = true;
+        }
+
+        Board.rotateQueue.push([left, cw, 0]);
+
+        if (!Board.rotating) {
+            Board.rotate();
+        }
+    },
+
+    evResize: function () {
+        Board.init();
+        Board.drawAll();
+    },
+
+    evMouseMove: function (event) {
+        if (Board.rotating) {
+            return;
+        }
+
+        if (event.layerX >= Board.getWindowWidth() - 50 && event.layerY <= 50) {
+            Board.canvas.style.cursor = "pointer";
+        } else {
+            Board.canvas.style.cursor = "";
+        }
+    },
+
+    evKeyDown: function (event) {
+        event = event || window.event;
+
+        switch (event.keyCode) {
+            case 76: // l
+                Board.load();
+                break;
+            case 78: // n
+                Board.shuffle();
+                break;
+            case 82: // r
+                Board.reset();
+                break;
+            case 83: // s
+                Board.save();
+                break;
+            case 85: // u
+                Board.undoMove();
+                break;
+        }
+    },
+
+    getWindowWidth: function () {
+        return window.innerWidth
+            || document.documentElement.clientWidth
+            || document.body.clientWidth
+            || 0;
+    },
+
+    getWindowHeight: function () {
+        return window.innerHeight
+            || document.documentElement.clientHeight
+            || document.body.clientHeight
+            || 0;
+    },
+
+    rotate: function () {
+        if (this.rotateQueue.length === 0) {
+            this.rotating = false;
+            return;
+        }
+
+        var step = this.rotateQueue.shift(),
+            left = step[0],
+            cw = step[1],
+            isUndoMove = step[2],
+            undoLen;
+
+        if (left) {
+            this.animCircle1 = this.left;
+            this.animCircle2 = this.right;
+            this.animSwapCircle = 0;
+            this.animTranslateX = this.translateX1;
+        } else {
+            this.animCircle1 = this.right;
+            this.animCircle2 = this.left;
+            this.animSwapCircle = 1;
+            this.animTranslateX = this.translateX2;
+        }
+
+        this.rotating = true;
+        this.drawStaticCircle(this.animCircle2);
+        this.animEndTime = (new Date()).getTime() + this.animationSpeed;
+
+        if (!isUndoMove) {
+            undoLen = this.undo.length - 1;
+            if (this.undo.length > 0 && this.undo[undoLen][0] === this.animSwapCircle && this.undo[undoLen][1] === !cw) {
+                this.undo.pop();
+                if (this.gameRunning) {
+                    this.moves--;
+                }
+            } else {
+                this.undo.push([this.animSwapCircle, cw]);
+                if (this.gameRunning) {
+                    this.moves++;
+                }
+            }
+        }
+
+        this.animTimer = setInterval(function () {
+            var i, deg, count;
+
+            Board.ctx.clearRect(0, 0, Board.canvas.width, Board.canvas.height);
+            Board.ctx.drawImage(Board.canvasBuffer, 0, 0);
+
+            deg = (1 - (Board.animEndTime - (new Date()).getTime()) / Board.animationSpeed) * 60;
+
+            if (deg >= 60) {
+                clearInterval(Board.animTimer);
+                Board.swapPolygonColors(Board.animSwapCircle, cw);
+                Board.ctx.translate(-Board.animTranslateX, -Board.translateY);
+                Board.ctx.clearRect(0, 0, Board.canvas.width, Board.canvas.height);
+                Board.ctx.translate(Board.animTranslateX, Board.translateY);
+                Board.drawAll(true);
+                if (Board.isSolved()) {
+                    Board.endGame();
+                    return;
+                }
+                Board.rotate();
+                return;
+            }
+
+            if (!cw) {
+                deg *= -1;
+            }
+
+            Board.ctx.translate(Board.animTranslateX, Board.translateY);
+
+            count = Board.animCircle1.length;
+            for (i = 0; i < count; i++) {
+                if (Board.animSwapCircle === 1) {
+                    Board.polygons[Board.animCircle1[i]].shiftLeft();
+                }
+                Board.polygons[Board.animCircle1[i]].rotate(deg);
+                if (Board.animSwapCircle === 1) {
+                    Board.polygons[Board.animCircle1[i]].shiftRight();
+                }
+                Board.polygons[Board.animCircle1[i]].draw(Board.ctx);
+            }
+
+            count = Board.middle.length;
+            for (i = 0; i < count; i++) {
+                if (Board.animSwapCircle === 1) {
+                    Board.polygons[Board.middle[i]].shiftLeft();
+                }
+                Board.polygons[Board.middle[i]].rotate(deg);
+                if (Board.animSwapCircle === 1) {
+                    Board.polygons[Board.middle[i]].shiftRight();
+                }
+                Board.polygons[Board.middle[i]].draw(Board.ctx);
+            }
+
+            Board.ctx.translate(-Board.animTranslateX, -Board.translateY);
+            Board.ctx.fillStyle = "#FFFFFF";
+            Board.drawTime();
+        }, this.refreshSpeed);
+    },
+
+    drawStaticCircle: function (circle) {
+        var count = circle.length;
+
+        this.ctxBuffer.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctxBuffer.translate(this.translateX1, this.translateY);
+        for (var i = 0; i < count; i++) {
+            this.polygons[circle[i]].draw(this.ctxBuffer);
+        }
+        this.ctxBuffer.translate(-this.translateX1, -this.translateY);
+
+        this.drawMenuIcon(this.ctxBuffer);
+    },
+
+    drawAll: function (reset) {
+        var i, count = this.polygons.length;
+
+        this.ctx.lineWidth = this.lineWidths[this.lineWidth];
+        this.ctxBuffer.lineWidth = this.lineWidths[this.lineWidth];
+
+        if (reset === undefined) {
+            reset = false;
+        }
+
+        this.ctx.translate(this.translateX1, this.translateY);
+        for (i = 0; i < count; i++) {
+            if (reset) {
+                this.polygons[i].reset();
+            }
+            this.polygons[i].draw(this.ctx);
+        }
+        this.ctx.translate(-this.translateX1, -this.translateY);
+
+        this.drawMenuIcon(this.ctx);
+        this.drawTime();
+    },
+
+    drawTime: function () {
+        if (!this.gameRunning) {
+            return;
+        }
+        var time = this.formatTime(((new Date()).getTime() - this.startTime) / 1000);
+        this.ctx.clearRect(0, this.getWindowHeight() - 45, this.canvas.width, 45);
+        this.ctx.fillText(time + "   " + this.moves + " moves", this.getWindowWidth() / 2, this.getWindowHeight() - 14);
+    },
+
+    formatTime: function (time) {
+        time = Math.floor(time);
+        var hour = Math.floor(time / 3600),
+            time = time - hour * 3600,
+            min = Math.floor(time / 60),
+            sec = time - min * 60;
+        return this.zeroPad(hour, 2) + ":" + this.zeroPad(min, 2) + ":" + this.zeroPad(sec, 2);
+    },
+
+    zeroPad: function (num, len) {
+        var s = num + "";
+        while (s.length < len) {
+            s = "0" + s;
+        }
+        return s;
+    },
+
+    drawMenuIcon: function (ctx) {
+        ctx.fillStyle = "#ffffff";
+        for (var i = 1; i <= 3; i++) {
+            ctx.beginPath();
+            ctx.rect(this.getWindowWidth() - 40, 10 * i, 30, 5);
+            ctx.fill();
+        }
+    },
+
+    swapPolygonColors: function (circle, cw) {
+        var i, len = swapList[circle].length;
+        for (i = 0; i < len; i++) {
+            this.swap(swapList[circle][i], cw);
+        }
+    },
+
+    swap: function (arr, cw) {
+        var i, tmp, len = arr.length;
+        if (cw) {
+            tmp = this.polygons[arr[0]].color;
+            for (i = 0; i < len - 1; i++) {
+                this.polygons[arr[i]].color = this.polygons[arr[i + 1]].color;
+            }
+            this.polygons[arr[i]].color = tmp;
+        } else {
+            tmp = this.polygons[arr[len - 1]].color;
+            for (i = len - 1; i > 0; i--) {
+                this.polygons[arr[i]].color = this.polygons[arr[i - 1]].color;
+            }
+            this.polygons[arr[0]].color = tmp;
+        }
+    },
+
+    shuffle: function () {
+        var i, j, circle = false, cw, steps;
+
+        if (this.gameRunning && !confirm("Start new game?")) {
+            return;
+        }
+
+        this.reset();
+
+        for (i = 0; i < 100; i++) {
+            cw = Math.floor(Math.random() * 2);
+            steps = Math.floor(Math.random() * 5 + 1);
+            circle = !circle;
+            for (j = 0; j < steps; j++) {
+                this.swapPolygonColors(
+                    (circle ? 1 : 0),
+                    (cw === 0 ? true : false)
+                );
+            }
+        }
+
+        this.drawAll();
+
+        Board.gameRunning = true;
+        Board.startTime = (new Date()).getTime();
+        Board.timer = setInterval(function () {
+            if (!Board.rotating) {
+                Board.drawTime();
+            }
+        }, 100);
+    },
+
+    isSolved: function () {
+        var i;
+
+        if (!this.gameRunning) {
+            return false;
+        }
+
+        for (i = 0; i < this.polygons.length; i++) {
+            if (this.polygons[i].defaultColor !== this.polygons[i].color) {
+                return false;
+            }
+        }
+
+        return true;
+    },
+
+    endGame: function () {
+        this.rotating = false;
+        this.rotateQueue = [];
+        this.gameRunning = false;
+        clearInterval(this.timer);
+        alert("Congratulations!");
+    },
+
+    save: function () {
+        var i,
+            polygonCount = polygonList.length,
+            polygons = "";
+
+        for (i = 0; i < polygonCount; i++) {
+            polygons += this.polygons[i].color;
+        }
+
+        Cookie.set("polygons", polygons);
+        Options.setColorScheme(this.colorScheme);
+        Options.setLineWidth(this.lineWidth);
+    },
+
+    load: function () {
+        var i,
+            polygonCount = polygonList.length,
+            colorScheme = parseInt(Cookie.get("color_scheme")),
+            lineWidth = parseInt(Cookie.get("line_width")),
+            polygons = Cookie.get("polygons");
+
+        if (polygons.length === polygonCount) {
+            this.reset();
+            this.colorScheme = colorScheme;
+            this.lineWidth = lineWidth;
+
+            for (i = 0; i < polygonCount; i++) {
+                this.polygons[i].color = parseInt(polygons.substr(i, 1));
+            }
+
+            this.drawAll();
+        }
+    },
+
+    undoMove: function () {
+        var move;
+
+        if (this.undo.length === 0) {
+            return;
+        }
+
+        move = this.undo.pop();
+        if (this.gameRunning) {
+            this.moves--;
+        }
+
+        this.rotateQueue.push([(move[0] ? false : true), !move[1], 1]);
+        if (!this.rotating) {
+            this.rotate();
+        }
+    }
+};
+
+var Cookie = {
+    get: function (name) {
+        var i, x, y, ARRcookies = document.cookie.split(";");
+
+        for (i = 0; i < ARRcookies.length; i++) {
+            x = ARRcookies[i].substr(0, ARRcookies[i].indexOf("="));
+            y = ARRcookies[i].substr(ARRcookies[i].indexOf("=") + 1);
+            x = x.replace(/^\s+|\s+$/g,"");
+            if (x === name) {
+                return decodeURI(y);
+            }
+        }
+
+        return "";
+    },
+
+    set: function (name, value) {
+        var cookieVal;
+        var exdays = 365;
+        var exdate = new Date();
+        exdate.setDate(exdate.getDate() + exdays);
+        cookieVal = encodeURI(value) + ((exdays === null) ? "" : "; expires=" + exdate.toUTCString());
+        document.cookie = name + "=" + cookieVal;
+    }
+};
+
+var Options = {
+    init: function () {
+        var colors = Cookie.get("color_scheme"),
+            lineWidth = Cookie.get("line_width");
+
+        if (colors.length > 0) {
+            Board.colorScheme = parseInt(colors, 10);
+            Board.lineWidth = parseInt(lineWidth, 10);
+        } else {
+            this.setColorScheme(0);
+            this.setLineWidth(0);
+            this.evShow();
+        }
+
+        document.getElementById("menu").addEventListener("click", Options.evHide);
+        document.getElementById("menu_inner").addEventListener("click", function (event) { event.stopPropagation(); });
+        document.getElementById("button_close").addEventListener("click", Options.evHide);
+        document.getElementById("color_scheme").addEventListener("change", Options.evChangeColors);
+        document.getElementById("polygon_border").addEventListener("change", Options.evChangeBorder);
+    },
+
+    evShow: function () {
+        document.getElementById("color_scheme").value = Board.colorScheme;
+        document.getElementById("polygon_border").value = Board.lineWidth;
+        document.getElementById("menu").classList.remove("no-display");
+    },
+
+    evChangeColors: function () {
+        var dCol = document.getElementById("color_scheme"),
+            colors = parseInt(dCol.options[dCol.selectedIndex].value, 10);
+
+        if (colors >= 0 && colors < Board.colors.length) {
+            Board.colorScheme = colors;
+            Options.setColorScheme(colors);
+        }
+
+        Board.drawAll();
+    },
+
+    evChangeBorder: function () {
+        var dBord = document.getElementById("polygon_border"),
+            border = parseInt(dBord.options[dBord.selectedIndex].value, 10);
+
+        if (border >= 0 && border < Board.lineWidths.length) {
+            Board.lineWidth = border;
+            Options.setLineWidth(border);
+        }
+
+        Board.drawAll();
+    },
+
+    evHide: function () {
+        document.getElementById("menu").classList.add("no-display");
+    },
+
+    setColorScheme: function (colors) {
+        Cookie.set("color_scheme", colors);
+    },
+
+    setLineWidth: function (width) {
+        Cookie.set("line_width", width);
+    }
+};
+
+Options.init();
+Board.init();
+
+        </script>
+    </body>
+</html>
